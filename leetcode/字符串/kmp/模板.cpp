@@ -23,7 +23,7 @@ class Solution {
             int j = 0;
             for (int i = 0; i < n; i++) {
                 while (j > 0 && haystack[i] != needle[j]) {
-                    j = next[j]; // 直接跳转
+                    j = next[j - 1]; // 直接跳转
                 }
                 if (haystack[i] == needle[j]) {
                     j++;

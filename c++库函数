@@ -1,0 +1,29 @@
+
+void sort(start,end,cmp)  //默认小到大
+
+bool cmp(int a,int b)
+{
+    return a>b;
+}
+
+struct Node
+{
+	int a;
+	int b;
+	double c;
+};
+
+bool cmp(Node x, Node y)
+{
+	if (x.a != y.a)
+		return x.a < y.a;
+	if (x.b != y.b)
+		return x.b > y.b;
+	return x.c > y.c;
+}
+
+	sort(arr, arr + 4, cmp);
+	
+std::string::substr(start_index, length)：返回一个子字符串，起始位置 start_index，长度 length。
+std::string str = "Hello World!";
+std::string sub = str.substr(6, 5); // 从第6个字符开始，取5个字符，结果是 "World"
