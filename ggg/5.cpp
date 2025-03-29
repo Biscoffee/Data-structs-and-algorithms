@@ -20,6 +20,7 @@ typedef union uni {
 int main(){
     int x = sizeof(str);
     int y = sizeof(uni);
+
     printf("x = %d, y = %d\n", x,y);
     printf("hello = %d\n", printf("3G = %d \n",--x == 39 && x-- == 47 && ++y == 49));
     printf("x1 = %d, y1 = %d\n", x,y);

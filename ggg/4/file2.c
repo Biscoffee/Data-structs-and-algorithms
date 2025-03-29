@@ -1,4 +1,5 @@
 #include <stdio.h>
+//#include "file1.c"
 #include "config.h"
 extern void updateLocalVar();
 extern int getLocalVar();
