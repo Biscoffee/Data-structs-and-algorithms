@@ -6,7 +6,7 @@ class Solution {
             int j = 0;
             for (int i = 1; i < n; i++) {
                 while (j > 0 && needle[i] != needle[j]) {
-                    j = next[j]; // 直接跳转
+                    j = next[j-1]; // 直接跳转
                 }
                 if (needle[i] == needle[j]) {
                     j++;
