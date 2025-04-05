@@ -1,11 +1,9 @@
 #include<iostream>
 using namespace std;
-int tentotwo(int n)
-{
+int tentotwo(int n){
     int res = 0;
     int t = 1;
-    while(n)
-    {
+    while(n){
         res += (n % 2) * t;
         t *= 10;
         n /= 2;
@@ -29,8 +27,7 @@ bool AorB(int res){
         return false;
     }
 }
-int main()
-{
+int main(){
     int n;
     cin >> n;
     int res = tentotwo(n);

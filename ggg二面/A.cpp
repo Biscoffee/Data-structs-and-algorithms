@@ -1,17 +1,14 @@
 #include <iostream>
 using namespace std;
 
-int main()
-{
+int main(){
     string s;
     cin >> s;
     int num[26];
-    for (int i = 0; i < 26; i++)
-    {
+    for (int i = 0; i < 26; i++){
         num[i] = 0;
     }
-    for (int i = 0; i < s.size(); i++)
-    {
+    for (int i = 0; i < s.size(); i++){
         num[s[i] - 'a']++;
     }
     for(char c : s){
