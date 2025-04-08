@@ -1,39 +1,23 @@
 #ifndef ACCOUNT_H
 #define ACCOUNT_H
 
-#include "common.h"
+#define MAX 100
 
-// 验证用户名是否合法
-int validateUsername(const char* username);
+typedef struct {
+    char username[20];
+    char password[20];
+    char role[10]; // student/teacher/admin
+} Account;
 
-// 验证密码是否合法
-int validatePassword(const char* password);
+extern Account accounts[MAX];
+extern int accountCount;
 
-// 验证角色是否合法
-int validateRole(const char* role);
-
-// 从文件加载账号信息
 void loadAccounts();
-
-// 保存账号信息到文件
 void saveAccounts();
-
-// 导入账号
-void importAccounts();
-
-// 导出账号
-void exportAccounts();
-
-// 注册账号
 void registerAccount();
+void changePassword();
+Account* login();
+void exportAccountsToFile();
+void importAccountsFromFile();
 
-// 修改密码
-void changePassword(const char* username);
-
-// 找回密码
-void forgotPassword();
-
-// 登录
-void login();
-
-#endif // ACCOUNT_H
+#endif

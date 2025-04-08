@@ -1,2 +1,2 @@
 wu 111 admin
-wu1 111 student
+cd "/Users/tommywu/Desk&& &&
