@@ -1,3 +1,2 @@
-wu 111 student
-wuwu 111 teacher
-wuwuwu 111 admin
+wu  student 7777777777
+wuwu 111 teacher 
