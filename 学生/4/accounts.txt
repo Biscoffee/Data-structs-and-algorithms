@@ -1,2 +1,3 @@
-wu  student 7777777777
-wuwu 111 teacher 
+wuwu 111 teacher wu
+student 1234567890 wu student
+wu  student 1111111111
