@@ -7,13 +7,11 @@
 #define MAX_STR_LEN 20
 #define MIN_SCORE 0
 #define MAX_SCORE 100
-
 typedef struct {
     char username[MAX_STR_LEN];
     char password[MAX_STR_LEN];
     char role[MAX_STR_LEN]; 
 } Account;
-
 typedef struct Student {
     char id[MAX_STR_LEN];
     char name[MAX_STR_LEN];
