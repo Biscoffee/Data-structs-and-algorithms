@@ -1,3 +1,6 @@
-wu 111 student
-wuwu 111 teacher
-wuwuwu 111 admin
+wu 123 student 1
+wuwu 111 teacher 2
+wuwu2 111 teacher 1
+wuwuwu 111 admin 
+li 111 student 1
+zhu 111 student 1
