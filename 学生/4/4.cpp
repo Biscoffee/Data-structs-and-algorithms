@@ -3,11 +3,16 @@
 #include <string.h>
 #include <ctype.h>
 #include <time.h>
+#include <termios.h>  // 终端控制头文件
+#include <unistd.h>   // 包含 STDIN_FILENO 的定义
+
 
 #define MAX_ACCOUNTS 100
 #define MAX_STR_LEN 20
 #define MIN_SCORE 0
 #define MAX_SCORE 100
+#define _POSIX_C_SOURCE 200809L
+
 
 typedef struct {
     char username[MAX_STR_LEN];
@@ -33,6 +38,38 @@ int accountCount = 0;
 Student* head = NULL;
 Student* tail = NULL;
 
+void safeInputPassword(char* buffer, int maxLen, const char* prompt) {
+    struct termios oldt, newt;
+    printf("%s", prompt);
+    fflush(stdout);
+
+    // 获取当前终端设置
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+
+    // 修改终端设置：禁用回显和行缓冲
+    newt.c_lflag &= ~(ECHO | ICANON);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+    int ch;
+    int pos = 0;
+    while ((ch = getchar()) != '\n' && pos < maxLen-1) {
+        if (ch == 127 || ch == 8) { // 处理退格键（macOS/Linux/Windows）
+            if (pos > 0) {
+                pos--;
+                printf("\b \b");
+            }
+        } else if (isprint(ch)) {
+            buffer[pos++] = ch;
+            printf("*");
+        }
+    }
+    buffer[pos] = '\0';
+    printf("\n");
+
+    // 恢复原始终端设置
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+}
 
 void safeInput(char* buffer, int maxLen, const char* prompt) {
     printf("%s", prompt);
@@ -101,7 +138,7 @@ void registerAccount() {
         }
     }
 
-    safeInput(acc.password, MAX_STR_LEN, "请输入密码: ");
+    safeInputPassword(acc.password, MAX_STR_LEN, "请输入密码: ");
     safeInput(acc.email, MAX_STR_LEN, "请输入邮箱: "); 
 
     while (1) {
@@ -161,7 +198,7 @@ void forgotPassword() {
     }
     
     char newpass[MAX_STR_LEN];
-    safeInput(newpass, MAX_STR_LEN, "请输入新密码: ");
+    safeInputPassword(newpass, MAX_STR_LEN, "请输入新密码: ");
     strcpy(target->password, newpass);
     saveAccounts();
     printf("密码重置成功！\n");
@@ -191,12 +228,46 @@ void analyzeAllScores() {
         printf("\n平均成绩: %.1f\n", (float)total/count);
     }
 }
+void sortStudentsByClass(const char* className, int ascending) {
+    // 收集符合条件的学生
+    Student* students[100];
+    int count = 0;
+    Student* cur = head;
+    
+    while(cur && count < 100) {
+        if(strcmp(cur->className, className) == 0) {
+            students[count++] = cur;
+        }
+        cur = cur->next;
+    }
+
+    // 排序算法（冒泡排序）
+    for(int i = 0; i < count-1; i++) {
+        for(int j = 0; j < count-i-1; j++) {
+            if(ascending ? (students[j]->score > students[j+1]->score) 
+                       : (students[j]->score < students[j+1]->score)) {
+                Student* temp = students[j];
+                students[j] = students[j+1];
+                students[j+1] = temp;
+            }
+        }
+    }
+
+    // 显示结果
+    printf("\n%-15s | %-15s | 成绩\n", "用户名", "姓名");
+    for(int i = 0; i < count; i++) {
+        printf("%-15s | %-15s | %3d\n", 
+              students[i]->username, 
+              students[i]->name, 
+              students[i]->score);
+    }
+}
 
 
 Account* login() {
     char username[MAX_STR_LEN], password[MAX_STR_LEN];
     safeInput(username, MAX_STR_LEN, "用户名: ");
-    safeInput(password, MAX_STR_LEN, "密码: ");
+    safeInputPassword(password, MAX_STR_LEN, "密码: ");
     
     for (int i = 0; i < accountCount; i++) {
         if (strcmp(accounts[i].username, username) == 0 && 
@@ -304,7 +375,6 @@ void addStudent(Account* currentAccount) {
     saveStudentsToFile();
     printf("添加成功！\n");
 }
-
 void teacherMenu(Account* acc) {
     int choice;
     do {
@@ -314,11 +384,12 @@ void teacherMenu(Account* acc) {
         printf("3. 修改学生信息\n");
         printf("4. 删除学生\n");
         printf("5. 班级成绩分析\n");
+        printf("6. 成绩排序\n");  // 新增选项
         printf("0. 返回上级\n");
-        choice = safeInputInt("请选择: ", 0, 5);
+        choice = safeInputInt("请选择: ", 0, 6);  // 修改选项范围
         
         switch(choice) {
-            case 1: 
+           case 1: 
                 addStudent(acc);
                 break;
             case 2: {
@@ -387,9 +458,17 @@ void teacherMenu(Account* acc) {
                 }
                 break;
             }
+            
+            case 6: {
+                printf("\n排序方式：");
+                int sortType = safeInputInt("1.降序 2.升序 : ", 1, 2);
+                sortStudentsByClass(acc->className, sortType == 2);
+                break;
+            }
         }
     } while (choice != 0);
 }
+
 
 void adminAccountManagement() {
     int choice;

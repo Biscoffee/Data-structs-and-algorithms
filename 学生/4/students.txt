@@ -1,2 +1,4 @@
-li lijiaxue 2 52
-zhu zhubin 2 52
+wu wutong 1 90
+wu1 wu1 1 59
+wu2 wu2 1 86
+wu3 99 1 0
