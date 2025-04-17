@@ -1,5 +1,0 @@
-wu 111 student 1
-wuwu 111 teacher 1
-wu1 111 student 1
-wu2 111 student 1
-wu3 111 student 1

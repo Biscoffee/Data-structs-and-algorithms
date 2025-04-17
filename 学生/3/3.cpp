@@ -12,7 +12,7 @@
 #define MIN_SCORE 0
 #define MAX_SCORE 100
 #define _POSIX_C_SOURCE 200809L
-
+#define MAX_APPEALS 50
 
 typedef struct {
     char username[MAX_STR_LEN];
@@ -21,6 +21,14 @@ typedef struct {
     char className[MAX_STR_LEN];
     char email[MAX_STR_LEN]; 
 } Account;
+
+typedef struct {
+    char username[MAX_STR_LEN];
+    char className[MAX_STR_LEN];
+    char reason[100];
+    int status; // 0:未处理 1:已处理
+} Appeal;
+
 
 typedef struct Student {
     char username[MAX_STR_LEN];
@@ -31,12 +39,142 @@ typedef struct Student {
     struct Student* next;
 } Student;
 
+Appeal appeals[MAX_APPEALS];  // 申诉记录数组
+int appealCount = 0;          // 申诉计数器
 
 Account accounts[MAX_ACCOUNTS];
 int accountCount = 0;
 
 Student* head = NULL;
 Student* tail = NULL;
+
+Student* findStudentByUsername(const char* username);
+void saveStudentsToFile();
+void loadStudentsFromFile();
+void safeInput(char* buffer, int maxLen, const char* prompt);
+int safeInputInt(const char* prompt, int min, int max);
+void safeInputPassword(char* buffer, int maxLen, const char* prompt);
+void analyzeClassScore(Student* s);
+void submitAppeal(Account* acc);
+void handleAppeals();
+
+void saveAppeals() {
+    FILE* fp = fopen("appeals.txt", "w");
+    if (!fp) return;
+    
+    for (int i = 0; i < appealCount; i++) {
+        fprintf(fp, "%s %s %s %d\n", 
+                appeals[i].username,
+                appeals[i].className,
+                appeals[i].reason,
+                appeals[i].status);
+    }
+    fclose(fp);
+}
+
+void analyzeClassScore(Student* s) {
+    if (!head) {
+        printf("暂无班级数据！\n");
+        return;
+    }
+    
+    int total = 0, count = 0;
+    int currentScore = s->score;
+    int higherCount = 0;
+    Student* cur = head;
+    
+    printf("\n=== 班级 %s 成绩分析 ===\n", s->className);
+    while(cur) {
+        if(strcmp(cur->className, s->className) == 0) {
+            total += cur->score;
+            count++;
+            if(cur->score > currentScore) higherCount++;
+        }
+        cur = cur->next;
+    }
+    
+    if(count == 0) return;
+    
+    printf("你的成绩: %d\n", currentScore);
+    printf("班级平均分: %.1f\n", (float)total/count);
+    printf("班级排名: %d/%d\n", higherCount+1, count);
+}
+
+// 学生申诉
+void submitAppeal(Account* acc) {
+    if(appealCount >= MAX_APPEALS) {
+        printf("申诉数量已达上限！\n");
+        return;
+    }
+    
+    Student* s = findStudentByUsername(acc->username);
+    if(!s) {
+        printf("未找到学生信息！\n");
+        return;
+    }
+    
+    printf("\n=== 提交申诉 ===\n");
+    printf("当前成绩: %d\n", s->score);
+    
+    char reason[100];
+    safeInput(reason, sizeof(reason), "请输入申诉理由: ");
+    
+    strcpy(appeals[appealCount].username, acc->username);
+    strcpy(appeals[appealCount].className, s->className);
+    strcpy(appeals[appealCount].reason, reason);
+    appeals[appealCount].status = 0;
+    appealCount++;
+    
+    saveAppeals();
+    printf("申诉已提交，等待管理员处理！\n");
+}
+
+void handleAppeals() {
+    int hasPending = 0;
+    printf("\n=== 待处理申诉 ===\n");
+    
+    for(int i=0; i<appealCount; i++) {
+        if(appeals[i].status == 0) {
+            hasPending = 1;
+            printf("[%d] 班级:%s 学生:%s\n理由: %s\n", 
+                   i+1, 
+                   appeals[i].className,
+                   appeals[i].username,
+                   appeals[i].reason);
+        }
+    }
+    
+    if(!hasPending) {
+        printf("暂无待处理申诉！\n");
+        return;
+    }
+    
+    int choice = safeInputInt("请输入要处理的申诉编号(0取消): ", 0, appealCount);
+    if(choice == 0) return;
+    
+    choice--; // 转换为数组索引
+    if(choice <0 || choice >= appealCount) {
+        printf("无效编号！\n");
+        return;
+    }
+    
+    printf("\n1. 通过申诉\n2. 拒绝申诉\n");
+    int action = safeInputInt("请选择处理方式: ", 1, 2);
+    
+    if(action == 1) {
+        Student* s = findStudentByUsername(appeals[choice].username);
+        if(s) {
+            int newScore = safeInputInt("请输入修正后的成绩: ", MIN_SCORE, MAX_SCORE);
+            s->score = newScore;
+            saveStudentsToFile();
+        }
+    }
+    
+    appeals[choice].status = 1;
+    saveAppeals();
+    printf("申诉已处理！\n");
+}
+
 
 void safeInputPassword(char* buffer, int maxLen, const char* prompt) {
     struct termios oldt, newt;
@@ -96,13 +234,25 @@ void loadAccounts() {
     FILE* fp = fopen("accounts.txt", "r");
     if (!fp) return;
     
-    while (accountCount < MAX_ACCOUNTS && 
-           fscanf(fp, "%19s %19s %19s %19s", 
-                  accounts[accountCount].username,
-                  accounts[accountCount].password,
-                  accounts[accountCount].role,
-                  accounts[accountCount].className) == 4) { // 修改
-        accountCount++;
+    char line[256];
+    while (fgets(line, sizeof(line), fp)) {
+        // 使用strtok解析带分隔符的数据
+        char* username = strtok(line, "|");
+        char* password = strtok(NULL, "|");
+        char* role = strtok(NULL, "|");
+        char* className = strtok(NULL, "|");
+        char* email = strtok(NULL, "\n");
+
+        if (username && password && role && className && email) {
+            strncpy(accounts[accountCount].username, username, MAX_STR_LEN);
+            strncpy(accounts[accountCount].password, password, MAX_STR_LEN);
+            strncpy(accounts[accountCount].role, role, MAX_STR_LEN);
+            strncpy(accounts[accountCount].className, 
+                   (strcmp(role, "admin") == 0) ? "ADMIN_CLASS" : className, // 统一管理员班级标识
+                   MAX_STR_LEN);
+            strncpy(accounts[accountCount].email, email, MAX_STR_LEN);
+            accountCount++;
+        }
     }
     fclose(fp);
 }
@@ -112,11 +262,13 @@ void saveAccounts() {
     if (!fp) return;
     
     for (int i = 0; i < accountCount; i++) {
-        fprintf(fp, "%s %s %s %s\n", 
+        // 增加email字段，使用|作为分隔符防止空格冲突
+        fprintf(fp, "%s|%s|%s|%s|%s\n", 
                 accounts[i].username, 
                 accounts[i].password, 
                 accounts[i].role,
-                accounts[i].className); 
+                accounts[i].className,
+                accounts[i].email);  // 新增email
     }
     fclose(fp);
 }
@@ -139,7 +291,10 @@ void registerAccount() {
     }
 
     safeInputPassword(acc.password, MAX_STR_LEN, "请输入密码: ");
-    safeInput(acc.email, MAX_STR_LEN, "请输入邮箱: "); 
+
+    do {
+        safeInput(acc.email, MAX_STR_LEN, "请输入有效邮箱: ");
+    } while (!strstr(acc.email, "@")); 
 
     while (1) {
         safeInput(acc.role, MAX_STR_LEN, "请输入角色 (student/teacher/admin): ");
@@ -152,7 +307,7 @@ void registerAccount() {
             break;
         }
         if (strcmp(acc.role, "admin") == 0) {
-            strcpy(acc.className, "");
+            strcpy(acc.className, "ADMIN_CLASS");
             break;
         }
         printf("角色无效！\n");
@@ -181,7 +336,8 @@ void forgotPassword() {
     }
 
     safeInput(email, MAX_STR_LEN, "请输入注册邮箱: ");
-    if (strcmp(target->email, email) != 0) {
+    
+    if (strlen(target->email) == 0 || strcmp(target->email, email) != 0) {
         printf("邮箱验证失败！\n");
         return;
     }
@@ -375,6 +531,8 @@ void addStudent(Account* currentAccount) {
     saveStudentsToFile();
     printf("添加成功！\n");
 }
+
+
 void teacherMenu(Account* acc) {
     int choice;
     do {
@@ -621,14 +779,31 @@ void adminStudentManagement() {
     } while(subChoice != 0);
 }
 
+void loadAppeals() {
+    FILE* fp = fopen("appeals.txt", "r");
+    if (!fp) return;
+    
+    while (appealCount < MAX_APPEALS && 
+           fscanf(fp, "%19s %19s %99[^\n] %d", 
+                  appeals[appealCount].username,
+                  appeals[appealCount].className,
+                  appeals[appealCount].reason,
+                  &appeals[appealCount].status) == 4) {
+        appealCount++;
+    }
+    fclose(fp);
+}
+
+
 void adminMenu(Account* acc) {
     int choice;
     do {
         printf("\n=== 管理员菜单 ===\n");
         printf("1. 学生管理\n");
         printf("2. 账号管理\n");
+        printf("3. 处理申诉\n");  // 新增
         printf("0. 返回上级\n");
-        choice = safeInputInt("请选择: ", 0, 2);
+        choice = safeInputInt("请选择: ", 0, 3);  // 修改选项范围
         
         switch(choice) {
             case 1: 
@@ -637,10 +812,12 @@ void adminMenu(Account* acc) {
             case 2: 
                 adminAccountManagement();
                 break;
+            case 3:
+                handleAppeals();
+                break;
         }
     } while(choice != 0);
 }
-
 
 void studentMenu(Account* acc) {
     int choice;
@@ -654,8 +831,10 @@ void studentMenu(Account* acc) {
         printf("\n=== 学生菜单 ===\n");
         printf("1. 查看我的成绩\n");
         printf("2. 查看班级成绩\n");
+        printf("3. 成绩分析\n");       // 新增
+        printf("4. 提交成绩申诉\n");   // 新增
         printf("0. 返回\n");
-        choice = safeInputInt("请选择: ", 0, 2);
+        choice = safeInputInt("请选择: ", 0, 4);  // 修改选项范围
         
         switch(choice) {
             case 1: {
@@ -677,14 +856,20 @@ void studentMenu(Account* acc) {
                 }
                 break;
             }
+            case 3:
+                analyzeClassScore(s);
+                break;
+            case 4:
+                submitAppeal(acc);
+                break;
         }
     } while(choice != 0);
 }
 
-
 int main() {
     loadAccounts();
     loadStudentsFromFile();
+    loadAppeals();
     
     int choice;
     do {
@@ -718,6 +903,7 @@ int main() {
         head = head->next;
         free(temp);
     }
+    saveAppeals();
     printf("系统已安全退出\n");
     return 0;
 }
