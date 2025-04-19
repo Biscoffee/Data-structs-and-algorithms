@@ -1,3 +1,0 @@
-wu 111 student
-wuwuwu 111 admin
-wuwu 111 teacher
